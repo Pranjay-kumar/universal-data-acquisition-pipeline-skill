@@ -1,0 +1,58 @@
+{
+  "name": "macys_public_product_metadata_probe",
+  "run_date": "2026-06-09",
+  "source_access_class": "public",
+  "full_run_approved": false,
+  "probes": [
+    {
+      "name": "robots",
+      "url": "https://www.macys.com/robots.txt",
+      "status": 200,
+      "content_type": "text/plain"
+    },
+    {
+      "name": "sitemap_index",
+      "url": "https://www.macys.com/dyn_img/sitemap/mcom_sitemapindex.xml",
+      "status": 200,
+      "pdp_shards_observed": 10
+    },
+    {
+      "name": "sampled_pdp_sitemap_shard",
+      "url": "https://www.macys.com/dyn_img/sitemap/mcom_sitemap_pdp_aa.xml.gz",
+      "status": 200,
+      "content_type": "application/x-gzip",
+      "url_count": 50000,
+      "repeat_probe_status": 403
+    },
+    {
+      "name": "product_detail_xapi_sample",
+      "product_id": "21552892",
+      "status": 200,
+      "content_type": "application/json",
+      "bytes": 90565,
+      "field_groups": [
+        "identifier",
+        "department",
+        "division",
+        "detail",
+        "shipping",
+        "relationships",
+        "imagery",
+        "availability",
+        "traits",
+        "pricing",
+        "productReviews"
+      ]
+    }
+  ],
+  "observed_edge_behavior": [
+    "An immediate repeat of the sampled PDP sitemap shard later returned edge 403.",
+    "Repeated product detail probes later returned 403 or 404 for some IDs.",
+    "Rendered Playwright category probe returned a Macy's access-denied page from this environment.",
+    "The recommended production path is sitemap-first discovery with conservative, checkpointed detail enrichment."
+  ],
+  "publishability": {
+    "publishable": true,
+    "reason": "Only public robots, sitemap, and unauthenticated product detail observations are included. No cookies, tokens, account data, checkout data, or private session state are included."
+  }
+}

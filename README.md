@@ -124,7 +124,7 @@ The useful result is not "here is a scraper." The useful result is:
 
 | Target | Best Source Found | Pagination/Coverage Signal | Feasibility |
 |---|---|---|---|
-| Macy's product metadata | Category sitemap -> public category XAPI -> product detail XAPI | Category grids and product IDs are publicly discoverable; dedupe needed across categories | Green |
+| Macy's product metadata | Robots-listed sitemap index -> PDP sitemap shards -> product detail XAPI | One sampled PDP shard returned 50,000 product URLs and a detail XAPI sample returned rich metadata; immediate repeats showed edge sensitivity | Green-Yellow |
 | Wattpad followers/following | Public user graph API | Followers on popular accounts appear publicly capped near a deep offset; following behaves differently | Yellow |
 | StreetEasy listings | Public search-page JSON-LD plus sitemap indexes | Child listing sitemap files returned 403; robots disallows key detail/API paths | Yellow |
 
@@ -221,7 +221,7 @@ More examples live in [PROMPTS.md](PROMPTS.md).
 
 ## Real Results
 
-- [Macy's product metadata](case-studies/macys.md): category sitemap to public XAPI, with full catalog-check notes.
+- [Macy's product metadata pipeline](case-studies/macys.md): robots-listed sitemap index to PDP shards to product detail XAPI, with a tracked `pipeline.yaml`, sample rows, and run report.
 - [Wattpad followers/following](case-studies/wattpad.md): public endpoint discovery with pagination caps and responsible feasibility scoring.
 - [Greenhouse and Lever public job boards](case-studies/greenhouse-lever-jobs.md): ATS public APIs, provider-specific pagination, and hiring-signal pipeline design.
 - [StreetEasy public real estate listings](case-studies/streeteasy.md): JSON-LD and sitemap discovery with a clear Yellow boundary around 403s and disallowed routes.
@@ -267,6 +267,10 @@ skills/
     SKILL.md
 case-studies/
   macys.md
+  macys-product-metadata/
+    pipeline.yaml
+    sample-rows.jsonl
+    run-report.json
   wattpad.md
   greenhouse-lever-jobs.md
   streeteasy.md

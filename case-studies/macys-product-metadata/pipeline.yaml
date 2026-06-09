@@ -1,0 +1,81 @@
+name: macys_public_product_metadata
+entity: product_snapshot
+source_access_class: public
+run_date: 2026-06-09
+strategy: sitemap_product_discovery_then_checkpointed_detail_enrichment
+
+sources:
+  - name: robots
+    type: robots
+    url: https://www.macys.com/robots.txt
+  - name: sitemap_index
+    type: sitemap_index
+    url: https://www.macys.com/dyn_img/sitemap/mcom_sitemapindex.xml
+  - name: pdp_sitemap_shards
+    type: gzip_sitemap
+    selector: mcom_sitemap_pdp_*.xml.gz
+    sampled_shard: https://www.macys.com/dyn_img/sitemap/mcom_sitemap_pdp_aa.xml.gz
+    observed_shards: 10
+    sampled_url_count: 50000
+    repeat_probe_note: immediate repeat later returned edge 403
+  - name: product_detail_xapi
+    type: json
+    template: https://www.macys.com/xapi/digital/v1/product/{product_id}?currencyCode=USD&_deviceType=DESKTOP&_regionCode=US&_shoppingMode=SITE&_application=SITE&bigTicketCXHeaders=1&_customerExperiment=&_customerState=GUEST
+
+headers:
+  User-Agent: Mozilla/5.0 public-data-pipeline/0.1
+  Accept: application/json,application/xml,text/plain,*/*
+  Accept-Language: en-US,en;q=0.9
+
+schema:
+  primary_key:
+    - product_id
+  fields:
+    - product_id
+    - product_url
+    - name
+    - brand
+    - regular_price
+    - sale_price
+    - available
+    - description_text
+    - bullet_text
+    - image_urls
+    - review_count
+    - average_rating
+    - traits
+    - observed_at
+
+normalization:
+  product_id: parse ID query parameter from sitemap product_url
+  image_url: prefix imagery.images[].filePath with https://slimages.macysassets.com/is/image/MCY/products/
+  price: read pricing.price.tieredPrice[].values[]
+  description: read detail.description, detail.secondaryDescription, and detail.bulletText when present
+
+outputs:
+  - raw/sitemap_index.xml
+  - raw/pdp_sitemaps/*.xml.gz
+  - raw/product_detail/{product_id}.json
+  - normalized/product_urls.jsonl
+  - normalized/product_snapshots.jsonl
+  - reports/run_report.json
+
+quality_gates:
+  - sitemap index returns at least one PDP shard
+  - at least one accepted PDP shard parses at least one product URL
+  - product IDs parse from ID= query parameter
+  - detail response contains product[0].id matching requested product_id
+  - image file paths canonicalize to Macy's image host
+  - run report records 403, 404, empty, and malformed detail responses
+
+limits:
+  no_cookies: true
+  no_auth: true
+  no_cart_checkout_or_account_routes: true
+  no_captcha_solving: true
+  no_rate_limit_bypass: true
+  detail_enrichment_requires_approval: true
+
+approval:
+  sample_validated: true
+  full_run_approved: false
