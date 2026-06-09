@@ -165,6 +165,7 @@ More examples live in [PROMPTS.md](PROMPTS.md).
 
 - [Macy's product metadata](case-studies/macys.md): category sitemap to public XAPI, with full catalog-check notes.
 - [Wattpad followers/following](case-studies/wattpad.md): public endpoint discovery with pagination caps and responsible feasibility scoring.
+- [Greenhouse and Lever public job boards](case-studies/greenhouse-lever-jobs.md): ATS public APIs, provider-specific pagination, and hiring-signal pipeline design.
 
 Only publish case studies after using the skill on a real target and recording probe-backed evidence. Keep hypothetical examples in `PROMPTS.md` or `references/examples.md`, not in `case-studies/`.
 
@@ -188,6 +189,7 @@ references/
 case-studies/
   macys.md
   wattpad.md
+  greenhouse-lever-jobs.md
 PROMPTS.md
 CONTRIBUTING.md
 LICENSE
