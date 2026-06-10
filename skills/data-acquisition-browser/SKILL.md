@@ -7,6 +7,8 @@ description: "Use for Patchright/Playwright-based public or authorized browser p
 
 Act as the browser acquisition specialist. Use Patchright for warm-session capture when a normal browser must mint cookies or storage state before API endpoints are visible. Use Playwright for ordinary rendered-DOM fallback when structured HTTP probes are insufficient and no warm browser context is needed.
 
+When the user asks for page loads only or "no API", use Patchright as a renderer and extract DOM/JSON-LD/meta/visible rows only. Do not harvest, replay, or recommend structured endpoints in that mode.
+
 ## Shared Core
 
 Read from `../data-acquisition-core/references/`:
@@ -19,7 +21,7 @@ Read from `../data-acquisition-core/references/`:
 
 ## Helpers
 
-Use `scripts/patchright_cookie_endpoint_probe.mjs` for warm-session cookie/storage generation and endpoint discovery. Use `scripts/playwright_probe.mjs` only for ordinary public rendered-DOM fallback.
+Use `scripts/patchright_cookie_endpoint_probe.mjs` for warm-session cookie/storage generation and endpoint discovery. Use `scripts/patchright_page_dom_probe.mjs` for Patchright page-load-only DOM extraction. Use `scripts/playwright_probe.mjs` only for ordinary public rendered-DOM fallback.
 
 From the repo root:
 
@@ -30,6 +32,15 @@ npm run probe:patchright -- "https://example.com/public-category" "outputs/examp
 ```
 
 The Patchright helper opens a persistent Chrome context, lets the page create ordinary browser-issued cookies/storage state, records JSON/API/XHR-looking requests and responses, saves local storage state under `auth/`, and writes a redacted endpoint report.
+
+Page-load-only mode:
+
+```powershell
+$env:PATCHRIGHT_HEADLESS = "0"
+npm run probe:patchright-page -- "https://example.com/category" "outputs/example-page-dom.json"
+```
+
+This mode records rendered page metadata, JSON-LD, canonical URL, visible text, candidate links, product/listing-like DOM nodes, and a screenshot. It sets `api_endpoint_discovery: false` and `replay_attempted: false`.
 
 Useful options:
 
@@ -48,6 +59,16 @@ npm run probe:playwright -- "https://example.com/public-page" "outputs/example-p
 ```
 
 Never print or commit storage state, cookies, account pages, or local browser profiles.
+
+## Autonomous Browser Fallback Rules
+
+Use this ladder for tiny feasibility probes:
+
+1. Try headless only when it is likely to behave like an ordinary public browser.
+2. If headless returns a block page but the user allows browser probing, retry once with Patchright non-headless and a persistent local profile.
+3. If non-headless loads the public page, extract a sample of at most 20 visible rows and classify the route as browser-context dependent.
+4. If non-headless also returns access denied, CAPTCHA, login, or verification, stop. Do not add stealth, CAPTCHA solving, identity rotation, or bypass logic.
+5. If the user requested no API, use `probe:patchright-page`; do not run endpoint discovery or replay.
 
 ## Warm Session Capture
 

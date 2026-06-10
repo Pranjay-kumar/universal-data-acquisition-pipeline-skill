@@ -6,6 +6,7 @@
   "description": "Optional Patchright and Playwright helpers for the Universal Data Acquisition Pipeline skill.",
   "scripts": {
     "probe:playwright": "node skills/data-acquisition-browser/scripts/playwright_probe.mjs",
+    "probe:patchright-page": "node skills/data-acquisition-browser/scripts/patchright_page_dom_probe.mjs",
     "probe:patchright": "node skills/data-acquisition-browser/scripts/patchright_cookie_endpoint_probe.mjs"
   },
   "devDependencies": {

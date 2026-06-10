@@ -9,6 +9,8 @@ Act as the router for a data acquisition skill tree. Classify the request, selec
 
 Do not scrape immediately. First classify the source access, prove that a reliable data path exists, design a reusable pipeline, validate a small sample, and require approval before any full run.
 
+For feasibility requests, do not stop at desk research when public probing is possible. Run a bounded pre-report probe ladder first, then generate the feasibility report from the observed evidence. Treat the probes as due diligence, not execution: 1 to 3 URLs, 20 rows maximum, no account pages, no CAPTCHA solving, no rate-limit bypass, and no broad collection.
+
 ## Skill Tree
 
 Use the child skill that best matches the request:
@@ -58,6 +60,22 @@ Every request must move through:
 
 Never return raw code alone. The user wants a decision and an engineering design: what access class applies, whether the data is collectible, how complete it can be, the cheapest reliable path, the trapdoors, the quality gates, and the repeatable pipeline design.
 
+## Autonomous Feasibility Probe Ladder
+
+When mode is `feasibility`, `source-comparison`, `pagination-limits`, or `sample-validation`, run the narrowest safe probes before writing the report unless the user explicitly says "report only" or "do not browse/probe".
+
+Default sequence:
+
+1. `Source boundary`: fetch or inspect robots/sitemaps/public docs when available; identify disallowed, auth-only, and reject paths.
+2. `Cold structured probe`: try ordinary unauthenticated HTTP against one public seed URL and obvious public metadata files only; record status, redirects, schemas, and block pages.
+3. `Static/embedded probe`: inspect HTML for JSON-LD, canonical links, meta tags, embedded state, product/listing cards, and pagination clues.
+4. `Browser fallback`: if cold probes are blocked or incomplete and the data is visible in a normal browser, run a tiny browser probe using the `data-acquisition-browser` helper.
+5. `Patchright visible fallback`: if headless browser probing is blocked but a normal visible browser context is acceptable, run Patchright non-headless with a persistent local profile for 1 URL. Mark the source as `owned_session`/`non_public_authorized_result` if the pipeline depends on that local browser state.
+6. `Page-only option`: if the user asks for no API usage, use page-load DOM extraction only; do not discover, replay, or recommend API endpoints for execution.
+7. `Stop`: stop and score Red when progress would require CAPTCHA solving, fingerprint evasion, auth bypass, private data, or rate-limit bypass.
+
+The feasibility report must say which ladder steps were attempted, which succeeded, and which were intentionally not attempted.
+
 ## Reference Map
 
 Load only the shared core references needed for the request from `skills/data-acquisition-core/references/`, or delegate mentally to the matching child skill:
@@ -82,6 +100,8 @@ Load only the shared core references needed for the request from `skills/data-ac
 - Prefer structured endpoints over HTML parsing when allowed by the source access class.
 - Prefer endpoint templates, pagination params, and stable IDs over browser automation.
 - Use Playwright/rendered DOM only after public APIs, feeds, sitemaps, embedded JSON, and static HTML fail or are insufficient.
+- If a site blocks cold/headless access but works in Patchright non-headless, treat the route as feasible only for a visible-browser/page-load pipeline and lower stability/runtime/compliance scores accordingly.
+- If the user explicitly wants page loads only, skip API replay and endpoint harvesting; extract from rendered DOM, JSON-LD, meta tags, canonical links, and visible product/listing nodes.
 - Treat every ask as due diligence before implementation: answer "should we do this?" before "how do we code it?"
 - Treat vague "all data" requests as dataset-design problems before source discovery.
 - Use normal browser-style headers only when needed for public unauthenticated responses.
