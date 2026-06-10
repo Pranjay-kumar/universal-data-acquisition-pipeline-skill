@@ -48,7 +48,7 @@ Build a publishable case study that actually works: collect Macy's public produc
   ],
   "freshness": "daily or weekly depending on price-monitoring use case",
   "history": "snapshot history with first_seen, last_seen, price history, and availability history",
-  "coverage_target": "public PDP sitemap shards first; category/facet routes only for supplemental taxonomy context",
+  "coverage_target": "warm-session category APIs for browse/product tile metadata, with PDP sitemap shards as fallback product discovery coverage",
   "join_keys": ["product_id"],
   "privacy_or_risk_fields": ["cart, checkout, account, loyalty, order, or personalized recommendation data"],
   "exclusions": ["checkout flows", "account APIs", "reviews requiring login", "cart/add-to-bag routes"],
@@ -64,9 +64,9 @@ Build a publishable case study that actually works: collect Macy's public produc
 
 ```json
 {
-  "class": "public",
-  "publishable_as_public_result": true,
-  "reason": "The pipeline uses robots-listed sitemap indexes and unauthenticated public product detail JSON. No cookies, account data, auth tokens, CAPTCHA solving, or checkout routes are used."
+  "class": "public_or_owned_session",
+  "publishable_as_public_result": "public only when no cookies or storage state are required",
+  "reason": "The pipeline can use public robots-listed sitemap indexes and unauthenticated product detail JSON. If the category XAPI requires browser-issued cookies or storage state, that stage becomes owned_session and local-only."
 }
 ```
 
@@ -87,6 +87,13 @@ Build a publishable case study that actually works: collect Macy's public produc
     "type": "sitemap_index",
     "result": "200",
     "reason": "Lists PDP, category, facet, onsite, misc, and home page sitemap shards."
+  },
+  {
+    "name": "warm_category_xapi",
+    "url_template": "capture from visible category page network requests",
+    "type": "browser_issued_xhr",
+    "result": "recommended production route when a user-controlled warm browser can access category pages",
+    "reason": "Category pages are often the easiest way to obtain product tiles, category context, pagination, sort, and facet behavior."
   },
   {
     "name": "pdp_sitemap_shards",
@@ -170,6 +177,7 @@ Observed detail payload:
 
 Endpoint behavior notes:
 
+- Category APIs should be tested from a user-controlled warm browser session before falling back to sitemaps. Cold probes in this runner produced redirects or edge denials, but a visible browser session can reveal the exact Macy's category XHR shape.
 - The sitemap index was accessible from the local runner. The sampled PDP gzip shard returned 50,000 URLs in a successful probe, then returned an edge 403 on an immediate repeat.
 - A product detail request returned a rich JSON payload for product `21552892`.
 - Repeated product detail probes later returned edge `403` or product `404` responses for some IDs. Treat detail enrichment as a rate-sensitive stage with backoff, checkpointing, and small approved batches.
@@ -179,6 +187,17 @@ Endpoint behavior notes:
 
 ```json
 [
+  {
+    "name": "warm_category_xapi",
+    "method": "GET",
+    "template": "capture from the category page XHR/fetch request",
+    "extract": "Category product tiles, product IDs, names, brand, price/availability snippets, image data, category context, pagination params, sort/facet params",
+    "pagination": {
+      "type": "category browse",
+      "params_to_capture": ["category id", "canonical path", "page size", "offset or page index", "sort", "facets"]
+    },
+    "confidence": 0.88
+  },
   {
     "name": "pdp_sitemap_index",
     "method": "GET",
@@ -220,9 +239,9 @@ Endpoint behavior notes:
 ```json
 {
   "required": ["User-Agent", "Accept"],
-  "optional": ["Accept-Language", "Referer"],
-  "forbidden": ["cookies", "auth tokens", "captcha tokens", "fingerprint headers", "cart/session headers"],
-  "notes": "Use ordinary transparent browser-style headers. Do not bypass edge denials, account boundaries, checkout, or rate limits."
+  "optional": ["Accept-Language", "Referer", "Origin", "browser-issued storage state for owned_session runs"],
+  "forbidden": ["auth tokens", "captcha tokens", "fingerprint headers", "cart/session headers", "checkout headers"],
+  "notes": "Use ordinary browser-issued context from a user-controlled session when needed. Keep cookies/storage local and unpublished. Do not bypass edge denials, account boundaries, checkout, or rate limits."
 }
 ```
 
@@ -266,7 +285,7 @@ Endpoint behavior notes:
   "data_quality": 8,
   "engineering_cost": "M",
   "legal_tos_risk": "medium",
-  "recommended_path": "pdp_sitemap_plus_product_detail_xapi_with_conservative_pacing",
+  "recommended_path": "warm_category_xapi_plus_product_detail_xapi_with_pdp_sitemap_fallback",
   "traffic_light": "Green-Yellow"
 }
 ```
@@ -275,30 +294,32 @@ Endpoint behavior notes:
 
 ```json
 {
-  "fastest_viable_route": "Fetch the robots-listed sitemap index, select PDP sitemap shards, decompress accepted gzip sitemaps, and parse product URLs/IDs.",
-  "cheapest_robust_route": "Use PDP sitemaps as the discovery layer and product detail XAPI as a checkpointed enrichment layer with strict batch sizes and retry/backoff.",
-  "highest_coverage_route": "Process all 10 PDP shards, dedupe by product_id, then enrich only approved product cohorts. Add category/facet sitemaps later for taxonomy context.",
+  "fastest_viable_route": "Use Warm Session Capture on a category page, extract the live category XAPI request, and page through product tiles with the exact browser-issued request shape.",
+  "cheapest_robust_route": "Use warm category XAPI for product tile/category context and PDP sitemaps as fallback product discovery coverage. Enrich selected IDs through product detail XAPI with strict batch sizes and retry/backoff.",
+  "highest_coverage_route": "Combine category XAPI coverage across selected category seeds with all 10 PDP shards, dedupe by product_id, then enrich only approved product cohorts.",
   "coverage_ceiling": "Very high for discoverable public PDPs because the sampled shard alone contained 50,000 URLs and the index listed 10 PDP shards.",
   "main_trapdoors": [
     "do not crawl cart, checkout, account, search, or review-add routes",
     "PDP sitemaps can include products that later return 404 or unavailable detail responses",
     "detail XAPI can return edge 403s under repeated probing",
     "image URLs are file paths that need canonical image-host construction",
-    "category/facet pages overlap heavily and should not drive product discovery unless taxonomy is required"
+    "category/facet pages overlap heavily and require dedupe across category seeds",
+    "warm-session category routes must not publish cookies, storage state, or browser-issued secrets"
   ],
   "sample_before_full_run": [
-    "fetch sitemap index",
-    "fetch one PDP sitemap shard",
+    "capture one category XHR from a visible browser page",
+    "validate category pagination over 1-2 pages",
+    "fetch sitemap index as fallback coverage",
     "parse product IDs",
     "enrich 1-5 products through detail XAPI",
     "validate price, availability, image URL construction, and stable product_id"
   ],
   "stop_conditions": [
-    "route requires login, cookies, CAPTCHA, checkout, account, or private headers",
+    "route requires login, private account cookies, CAPTCHA, checkout, account, or private headers",
     "edge denials persist after backing off",
     "the requested fields require cart, personalization, or account state"
   ],
-  "recommendation": "Publish this as the working retail catalog architecture example: sitemap discovery gives scale when accepted by the edge; product detail XAPI gives rich metadata for validated samples; pipeline discipline handles edge sensitivity."
+  "recommendation": "Publish this as the working retail catalog architecture example: category XAPI is the preferred warm-session route for product tiles and browse context; PDP sitemaps provide coverage fallback; product detail XAPI gives rich metadata for validated samples."
 }
 ```
 
@@ -316,8 +337,8 @@ Endpoint behavior notes:
   "pagination": "Sitemap-index plus gzip shard pagination is explicit and simple. Detail enrichment is one product ID per request.",
   "runtime": "Discovery is cheap. Detail enrichment cost scales linearly with deduped product count.",
   "storage": "Store raw sitemap URLs, raw detail JSON for sampled/enriched products, normalized product snapshots, and run reports.",
-  "risk": "Medium because retail sites enforce edge controls. Do not use stealth, cookies, CAPTCHA solving, checkout routes, or rate-limit bypass.",
-  "recommended_strategy": "Use a two-stage product pipeline: public sitemap discovery when accepted by the edge, then conservative detail enrichment with checkpointing and quality gates.",
+  "risk": "Medium because retail sites enforce edge controls. Browser-issued cookies/storage may be used only as local owned-session context; do not publish them or use CAPTCHA solving, checkout routes, private account access, or rate-limit bypass.",
+  "recommended_strategy": "Use a three-stage product pipeline: warm-session category API capture for browse/product tile metadata, PDP sitemap fallback for coverage, then conservative detail enrichment with checkpointing and quality gates.",
   "confidence": 0.86
 }
 ```
@@ -364,8 +385,12 @@ name: macys_public_product_metadata
 entity: product_snapshot
 source_access_class: public
 run_date: 2026-06-09
-strategy: sitemap_product_discovery_then_checkpointed_detail_enrichment
+strategy: warm_category_xapi_then_sitemap_fallback_then_checkpointed_detail_enrichment
 sources:
+  - name: warm_category_xapi
+    type: browser_issued_xhr
+    capture: visible category page network request
+    fields: product tiles, category context, pagination, sort, facets
   - name: robots
     type: robots
     url: https://www.macys.com/robots.txt
@@ -412,7 +437,8 @@ outputs:
   - normalized/product_snapshots.jsonl
   - reports/run_report.json
 limits:
-  no_cookies: true
+  cookies_storage_state_local_only: true
+  no_published_cookies: true
   no_auth: true
   no_cart_checkout_or_account_routes: true
   no_captcha_solving: true
@@ -436,7 +462,7 @@ approval:
 This is the strongest retail case study because it is not "I scraped HTML." It is a real acquisition architecture:
 
 ```text
-robots -> sitemap index -> 10 product sitemap shards -> 50,000 URLs in one sampled shard -> stable product IDs -> rich product detail JSON -> normalized product_snapshot table
+visible category page -> live category XAPI -> product tiles and pagination -> product detail XAPI -> PDP sitemap fallback coverage -> normalized product_snapshot table
 ```
 
 The useful lesson is that the agent should not start with Playwright. It should first find the public catalog surfaces that already exist, then design a restartable pipeline around them.

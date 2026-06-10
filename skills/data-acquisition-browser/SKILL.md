@@ -37,3 +37,18 @@ npm run probe:playwright -- "https://example.com/account/export" "outputs/owned-
 ```
 
 Never print or commit storage state.
+
+## Warm Session Capture
+
+Use this when a normal public page, such as a retail category page, issues browser-context XHR/fetch requests that cold HTTP probes cannot reproduce.
+
+Capture locally:
+
+- user-owned browser storage state
+- observed endpoint URL and query params
+- safe request headers such as `Accept`, `Accept-Language`, `Origin`, and `Referer`
+- response field shape, pagination params, and sample rows
+
+Do not capture or publish cookies, auth tokens, CAPTCHA tokens, account state, cart state, or fingerprint material.
+
+See `../data-acquisition-core/references/execution-adapters.md` for optional runtime adapters, including Jacob Padilla's Stealth-Requests and Google-Colab-Selenium projects.

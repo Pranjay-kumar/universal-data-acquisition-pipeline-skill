@@ -69,6 +69,7 @@ Load only the shared core references needed for the request from `skills/data-ac
 - Endpoint discovery: `skills/data-acquisition-core/references/endpoint-discovery.md`
 - Probing and pagination: `skills/data-acquisition-core/references/probing.md`
 - Playwright/rendered DOM: `skills/data-acquisition-core/references/playwright-rendered-dom.md`
+- Warm sessions and execution adapters: `skills/data-acquisition-core/references/execution-adapters.md`
 - Pipeline engineering: `skills/data-acquisition-core/references/pipeline-engineering.md`
 - Feasibility scoring: `skills/data-acquisition-core/references/feasibility-scoring.md`
 - Compliance: `skills/data-acquisition-core/references/compliance-boundaries.md`
@@ -84,6 +85,7 @@ Load only the shared core references needed for the request from `skills/data-ac
 - Treat every ask as due diligence before implementation: answer "should we do this?" before "how do we code it?"
 - Treat vague "all data" requests as dataset-design problems before source discovery.
 - Use normal browser-style headers only when needed for public unauthenticated responses.
+- When a public page mints request context for public XHR/API calls, use Warm Session Capture: capture user-owned browser storage state and observed non-secret request templates locally, then replay tiny probes in that same authorized browser context.
 - Detect rate limits and design within them using backoff, caching, checkpointing, sampling, and approval gates. Do not bypass rate limits or access controls.
 - If cookies, credentials, or auth are involved, switch to `owned-session` or `licensed_api`, mark outputs non-public, avoid storing secrets, and require explicit approval.
 - Stop escalation when a path requires auth bypass, credential extraction, CAPTCHA solving, fingerprint evasion, private third-party access, or rate-limit bypass.

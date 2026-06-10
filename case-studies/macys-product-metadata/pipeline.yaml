@@ -2,9 +2,18 @@ name: macys_public_product_metadata
 entity: product_snapshot
 source_access_class: public
 run_date: 2026-06-09
-strategy: sitemap_product_discovery_then_checkpointed_detail_enrichment
+strategy: warm_category_xapi_then_sitemap_fallback_then_checkpointed_detail_enrichment
 
 sources:
+  - name: warm_category_xapi
+    type: browser_issued_xhr
+    capture: visible category page network request
+    fields:
+      - product tiles
+      - category context
+      - pagination
+      - sort
+      - facets
   - name: robots
     type: robots
     url: https://www.macys.com/robots.txt
@@ -69,7 +78,8 @@ quality_gates:
   - run report records 403, 404, empty, and malformed detail responses
 
 limits:
-  no_cookies: true
+  cookies_storage_state_local_only: true
+  no_published_cookies: true
   no_auth: true
   no_cart_checkout_or_account_routes: true
   no_captcha_solving: true

@@ -22,11 +22,13 @@ What is the right data acquisition path, and can it become a reliable pipeline?
 - Classifies source access: public, owned session, provided credentials, licensed API, partner API, internal system, or reject
 - Designs the actual dataset need before collection: decision, grain, fields, freshness, history, coverage, join keys, and exclusions
 - Finds public APIs and storefront/page-data endpoints
+- Captures browser-issued warm-session request context for category/XHR APIs when cold probes are misleading
 - Derives endpoint templates, query params, headers, and pagination behavior
 - Probes limits with tiny requests before broad collection
 - Supports authorized owned-session Playwright pipelines without publishing them as public results
 - Adds production pipeline design: checkpoints, dedupe, raw/staged/normalized layers, quality gates, run reports, and recovery
 - Uses Playwright/rendered DOM as a bounded last resort when no public structured route works
+- Supports optional execution adapters, including Jacob Padilla's Stealth-Requests and Google-Colab-Selenium, under explicit source-access boundaries
 - Scores technical and responsible collection feasibility with Green/Yellow/Red status
 - Produces a data acquisition memo: fastest route, cheapest robust route, highest-coverage route, trapdoors, and stop conditions
 - Designs reusable pipeline plans with validation and approval gates
@@ -175,6 +177,28 @@ npm run probe:playwright -- "https://example.com/account/export" "outputs/owned-
 
 The storage state file is gitignored. Do not publish owned-session outputs as public case studies.
 
+## Warm Session And Adapters
+
+Some public category APIs are easiest to use after the normal browser page has minted request context. Macy's category pages are a good example: a cold runner may get edge-denied while a user-controlled browser can observe the exact XHR route, category ID, canonical path, page size, sort/facet params, and safe headers.
+
+Warm Session Capture flow:
+
+```text
+visible browser page
+-> observe XHR/fetch/category API
+-> save endpoint template + safe headers
+-> keep cookies/storage local if needed
+-> replay tiny probes in the same browser context
+-> generate pipeline.yaml
+```
+
+Optional adapter references:
+
+- [Stealth-Requests](https://github.com/jpjacobpadilla/Stealth-Requests): useful as a user-provided browser-like HTTP adapter with retries/parsing helpers. The skill treats it as an adapter, not as a license to bypass CAPTCHA, fingerprinting, auth, or rate limits.
+- [Google-Colab-Selenium](https://github.com/jpjacobpadilla/Google-Colab-Selenium): useful as a notebook-friendly browser runtime for user-driven warm-session capture and sample validation.
+
+If cookies or storage state are required, classify the run as `owned_session`, keep secrets local, and do not publish the result as a public case study.
+
 ## Install
 
 Clone the repo:
@@ -246,6 +270,7 @@ skills/
       feasibility-scoring.md
       compliance-boundaries.md
       source-strategies.md
+      execution-adapters.md
       output-contracts.md
       pattern-library.md
       playwright-rendered-dom.md

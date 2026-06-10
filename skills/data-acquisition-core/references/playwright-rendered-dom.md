@@ -94,7 +94,9 @@ For an authorized owned-session probe, use a local Playwright storage state file
 PLAYWRIGHT_STORAGE_STATE=auth/storage-state.json npm run probe:playwright -- "https://example.com/account/export" outputs/owned-session-probe.json
 ```
 
-- Use normal Playwright defaults. Do not add stealth plugins, fingerprint spoofing, CAPTCHA solvers, or private cookies for public probes.
+- For public probes, use normal Playwright defaults.
+- For Warm Session Capture, use a user-controlled browser context to observe browser-issued XHR/fetch routes and safe headers. Keep storage state local and classify the run as `owned_session` if cookies or local storage are required for replay.
+- Do not add CAPTCHA solvers, fingerprint spoofing, auth bypass, or rate-limit bypass.
 - For owned-session probes, storage state must remain local, gitignored, and never printed.
 - Prefer network-discovered public endpoints over DOM selectors whenever possible.
 - Keep selectors semantic when possible: links, headings, JSON-LD, visible cards, table rows, accessible labels.

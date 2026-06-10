@@ -20,6 +20,7 @@ Use owned-session mode only when all are true:
 
 - the user explicitly asks to use their own authenticated access
 - the user is authorized to access the data
+- the session is used to preserve ordinary browser-issued context, consent, region, or user-owned access
 - the pipeline does not bypass paywalls, access controls, CAPTCHA, rate limits, or account boundaries
 - outputs are marked `non_public_authorized_result`
 - cookies, tokens, and session files are never printed, committed, or included in reports
